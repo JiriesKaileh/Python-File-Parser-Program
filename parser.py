@@ -1,19 +1,19 @@
 import os                                #for accessing and iterating through directories
 import statistics                        #for calculating standard deviation
 import matplotlib.pyplot as plt          #for generating histogram
-import numpy as np                       #for generating histogram
+#import numpy as np                       #for generating histogram
 
 
+#anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\\anode'  #folder path to .csv acquisitions for AD1 in scenario 1
+#pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\pmt'      #folder path to .csv acquisitions for AD2 in scenario 1
 
+anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1'   #folder path to .csv acquisitions for AD1 in scenario 1
+pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\AD2'      #folder path to .csv acquisitions for AD2 in scenario 1
 
-
-
-anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data\\anode'  #folder path to .csv acquisitions for AD1
-pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data\\pmt'      #folder path to .csv acquisitions for AD2
 
 anodeTimes = []                                                    #list in which timestamps for anodeTimes is stored
 pmtTimes = []                                                      #list in which timestamps for pmtTimes is stored
-
+xAxis = []
 
 
 
@@ -72,7 +72,8 @@ count = 1  #serves as an index for the time differences
 
 for a, p in zip(anodeTimes, pmtTimes): 
     timeDifs.append( abs(a - p) )
-    #print(count, abs( a - p ))        #This can be uncommented to print the index then the time difference, however this slows down the program
+    print(count, abs( a - p ))        #This can be uncommented to print the index then the time difference, however this slows down the program
+    xAxis.append(count)
     count = count + 1
 
 print("\n")
@@ -82,21 +83,43 @@ print("\n")
 
 
 
-#calculate the average and standard deviation of the time differences
 print("The average time difference between the two oscilloscopes is: ")
-print(sum(timeDifs) / len(timeDifs))
+print(sum(timeDifs) / len(timeDifs))                                        #print average
 print("\n")
-print("the standard deviation is:")
+print("the standard deviation is:")                                         #print standard deviation
 print(statistics.stdev(timeDifs))
+print("\n")
+print("the median is:")
+print(statistics.median(timeDifs))                                                     #print median
+
+#figure something out for bipolar distributions
 
 #The following lines generate a histogram in a popup window
-np.histogram(timeDifs, bins=20, range=None, normed=None, weights=None, density=None)   
-plt.hist(timeDifs, bins ='auto')
-plt.title("time differences")
+
+nCols = 1
+
+nRows = 1
+
+fig, (ax1, ax2) = plt.subplots(2)   # create figure and axes
+
+ax1.hist(timeDifs, bins = 'auto')
+ax1.set_title('Time Differences')
+ax1.set_xlabel('Time Difference in Milliseconds')
+ax1.set_ylabel('Frequency')
+ax2.scatter(xAxis, anodeTimes)
+#ax2.scatter(xAxis, pmtTimes)
+ax2.set_title('Time versus acq number')
+ax2.set_xlabel('acq number')
+ax2.set_ylabel('Time in Milliseconds')
 plt.show()
+#plt.show()
+#plt.scatter(anodeTimes, xAxis)
+#plt.scatter(pmtTimes, xAxis)
+
 
 
 
 #pmt folder usually has one more acquisition than the anode folder. This can cause large discrepancies when 
 #multiple acquisitions runs are kept in the same folder as non-corresponding acquisitions are subtracted
 #resulting in huge differences. 
+
