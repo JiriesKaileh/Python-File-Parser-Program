@@ -1,8 +1,14 @@
 import os                                #for accessing and iterating through directories
 import statistics                        #for calculating standard deviation
 import matplotlib.pyplot as plt          #for generating histogram
-#import numpy as np                       #for generating histogram
+from statsmodels.graphics import tsaplots  #for autocorrelation function
+import numpy as np                       #for autocorrelation
+import scipy
+from scipy import signal
+from pandas import read_csv
+from statsmodels.graphics.tsaplots import plot_acf
 
+import csv
 
 #anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\\anode'  #folder path to .csv acquisitions for AD1 in scenario 1
 #pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\pmt'      #folder path to .csv acquisitions for AD2 in scenario 1
@@ -13,7 +19,7 @@ pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\AD2'      #fo
 
 anodeTimes = []                                                    #list in which timestamps for anodeTimes is stored
 pmtTimes = []                                                      #list in which timestamps for pmtTimes is stored
-xAxis = []
+difsXaxis = []                                                     #number of time differences recorded
 
 
 
@@ -40,13 +46,34 @@ for filename in os.listdir(pmtDir):
     pmtTimes.append(timeStampVal)                                   #add timestamp value to pmtTimes
 
 
+#the following section is supposed to 
+'''
+i = 1
+
+length = len(anodeTimes)
+
+while(i < length):
+    if(anodeTimes[i + 1] < anodeTimes[i] + 2):#we are going to have some statement that compares anodeTimes[i] and anodeTimes[i + 1] to see if anodeTimes[i + 1] is outside of a reasonable range for the current EFG output frequency
+        anodeTimes.pop(i + 1)
+        length -= 1
+    i += 1
+
+i = 1
+
+length = len(pmtTimes)
 
 
-
+while(i < length):
+    if(pmtTimes[i + 1] < pmtTimes[i] + 2):#we are going to have some statement that compares anodeTimes[i] and anodeTimes[i + 1] to see if anodeTimes[i + 1] is outside of a reasonable range for the current EFG output frequency
+       pmtTimes.pop(i + 1)
+       length -= 1
+    i += 1
+'''
 
 #The following section can be uncommented to display the timestamp values in anodeTimes and pmtTimes
 #This process slows down the program
-'''   
+
+'''
 print("-------------------- now displaying anodeTimes --------------") 
 
 for i in range(len(anodeTimes)):                                        #iterate through and print timestamp values of anodeTimes
@@ -64,7 +91,6 @@ for i in range(len(pmtTimes)):                                          #iterate
 
 
 
-
 timeDifs = [] #difference between timestamps is stored here
 
 
@@ -73,8 +99,8 @@ count = 1  #serves as an index for the time differences
 for a, p in zip(anodeTimes, pmtTimes): 
     timeDifs.append( abs(a - p) )
     print(count, abs( a - p ))        #This can be uncommented to print the index then the time difference, however this slows down the program
-    xAxis.append(count)
-    count = count + 1
+    difsXaxis.append(count)
+    count += 1
 
 print("\n")
 
@@ -100,26 +126,77 @@ nCols = 1
 
 nRows = 1
 
-fig, (ax1, ax2) = plt.subplots(2)   # create figure and axes
+fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5)   # create figure and axes
 
 ax1.hist(timeDifs, bins = 'auto')
 ax1.set_title('Time Differences')
 ax1.set_xlabel('Time Difference in Milliseconds')
 ax1.set_ylabel('Frequency')
-ax2.scatter(xAxis, anodeTimes)
-#ax2.scatter(xAxis, pmtTimes)
-ax2.set_title('Time versus acq number')
-ax2.set_xlabel('acq number')
-ax2.set_ylabel('Time in Milliseconds')
+
+
+count = 1
+
+
+anodeXaxis = []
+pmtXaxis = []
+
+
+while(count <= len(anodeTimes)):
+    anodeXaxis.append(count)
+    count += 1
+
+count = 1
+
+while(count <= len(pmtTimes)):
+    pmtXaxis.append(count)
+    count += 1
+
+
+ax2.scatter(anodeXaxis, anodeTimes, color="b")
+ax2.scatter(pmtXaxis, pmtTimes, color="r", marker="P")
+
+ax2.set_xlabel('acquisition number')
+ax2.set_ylabel('Time in miliseconds')         
+
+ax3.scatter(difsXaxis, timeDifs)
+
+ax3.set_xlabel('acq number')
+ax3.set_ylabel('Time difs in miliseconds') 
+
+an =[]
+
+pmt = []
+
+for a, p in zip(anodeTimes, pmtTimes):        #to create arrays of anodeTimes and pmtTimes of the same size
+    an.append(a)
+    pmt.append(p)
+
+ax4.scatter(an, pmt)                          # see the correlation between anodeTimes and pmtTimes
+
+ax4.set_xlabel('anode times')
+ax4.set_ylabel('pmt times')
+
+#fig = tsaplots.plot_acf(anodeTimes, lags = 25)
+
+corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
+
+ax5.plot(corr)
+
+'''
+autocorr = np.correlate(anodeTimes, pmtTimes, mode = 'valid')
+
+print('\n\n')
+
+for i in range(len(autocorr)):
+    print(autocorr[i])
+'''
+
 plt.show()
-#plt.show()
-#plt.scatter(anodeTimes, xAxis)
-#plt.scatter(pmtTimes, xAxis)
 
 
 
 
-#pmt folder usually has one more acquisition than the anode folder. This can cause large discrepancies when 
+#pmt folder usually has one more acquisition than the anode folder. This can cause l#arge discrepancies when 
 #multiple acquisitions runs are kept in the same folder as non-corresponding acquisitions are subtracted
 #resulting in huge differences. 
 
