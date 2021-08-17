@@ -10,15 +10,29 @@ from statsmodels.graphics.tsaplots import plot_acf
 
 import csv
 
+class Event():
+    scope = ''            #initialized to null string
+    timestamp = 0          #initialized to zero
+    voltage = 0            #this is the voltage from the ramp. It is initialized to zero
+
+    def __init__(self, scp, time):  #we will include voltage as soon as we figure out how to record from multiple sources in Waveforms 2015
+        self.scope = scp
+        self.timestamp = time
+
+
 #anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\\anode'  #folder path to .csv acquisitions for AD1 in scenario 1
 #pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\pmt'      #folder path to .csv acquisitions for AD2 in scenario 1
 
-anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1'   #folder path to .csv acquisitions for AD1 in scenario 1
-pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\AD2'      #folder path to .csv acquisitions for AD2 in scenario 1
+anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1 run 31'   #folder path to .csv acquisitions for AD1 in scenario 1
+pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD2 run 31'      #folder path to .csv acquisitions for AD2 in scenario 1
 
 
-anodeTimes = []                                                    #list in which timestamps for anodeTimes is stored
-pmtTimes = []                                                      #list in which timestamps for pmtTimes is stored
+#anodeTimes = []                                                    #list in which timestamps for anodeTimes is stored
+anode = []
+
+#pmtTimes = []                                                      #list in which timestamps for pmtTimes is stored
+pmt = []
+
 difsXaxis = []                                                     #number of time differences recorded
 
 
@@ -33,7 +47,9 @@ for filename in os.listdir(anodeDir):
   
     timeStampVal = int(name[index - 8]) * 600000 + int(name[index - 7]) * 60000 + int(name[index - 5]) * 10000 + int(name[index - 4]) * 1000 + int(name[index - 2]) * 100 + int(name[index - 1]) * 10 + int(name[index]) #converting the timestamp to milliseconds
 
-    anodeTimes.append(timeStampVal)                                 #add timestamp value to anodeTimes
+    #anodeTimes.append(timeStampVal)                                 #add timestamp value to anodeTimes
+
+    anode.append(Event("AD1", timeStampVal))
   
 
 for filename in os.listdir(pmtDir):
@@ -43,24 +59,26 @@ for filename in os.listdir(pmtDir):
     timeStampVal = int(name[index - 8]) * 600000 + int(name[index - 7]) * 60000 + int(name[index - 5]) * 10000 + int(name[index - 4]) * 1000 + int(name[index - 2]) * 100 + int(name[index - 1]) * 10 + int(name[index]) #converting the timestamp to milliseconds
 
 
-    pmtTimes.append(timeStampVal)                                   #add timestamp value to pmtTimes
+    #pmtTimes.append(timeStampVal)                                   #add timestamp value to pmtTimes
 
+    pmt.append(Event("AD2", timeStampVal))
 
-#the following section is supposed to 
+#the following section is supposed to get rid of acquisition duplicates
+
 '''
-i = 1
+i = 0
 
-length = len(anodeTimes)
+length = len(anodeTimes) - 1
 
 while(i < length):
-    if(anodeTimes[i + 1] < anodeTimes[i] + 2):#we are going to have some statement that compares anodeTimes[i] and anodeTimes[i + 1] to see if anodeTimes[i + 1] is outside of a reasonable range for the current EFG output frequency
+    if(anodeTimes[i + 1] < (anodeTimes[i] + 2)):#we are going to have some statement that compares anodeTimes[i] and anodeTimes[i + 1] to see if anodeTimes[i + 1] is outside of a reasonable range for the current EFG output frequency
         anodeTimes.pop(i + 1)
         length -= 1
     i += 1
 
-i = 1
+i = 0
 
-length = len(pmtTimes)
+length = len(pmtTimes) - 1
 
 
 while(i < length):
@@ -96,9 +114,11 @@ timeDifs = [] #difference between timestamps is stored here
 
 count = 1  #serves as an index for the time differences
 
-for a, p in zip(anodeTimes, pmtTimes): 
-    timeDifs.append( abs(a - p) )
-    print(count, abs( a - p ))        #This can be uncommented to print the index then the time difference, however this slows down the program
+#for a, p in zip(anodeTimes, pmtTimes): 
+for a, p in zip(anode, pmt):
+    #timeDifs.append( abs(a - p) )
+    timeDifs.append(abs(a.timestamp - p.timestamp))
+    print(count, abs( a.timestamp - p.timestamp ))        #This can be uncommented to print the index then the time difference, however this slows down the program
     difsXaxis.append(count)
     count += 1
 
@@ -122,11 +142,8 @@ print(statistics.median(timeDifs))                                              
 
 #The following lines generate a histogram in a popup window
 
-nCols = 1
 
-nRows = 1
-
-fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5)   # create figure and axes
+fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)   # create figure and axes
 
 ax1.hist(timeDifs, bins = 'auto')
 ax1.set_title('Time Differences')
@@ -141,15 +158,31 @@ anodeXaxis = []
 pmtXaxis = []
 
 
-while(count <= len(anodeTimes)):
+#while(count <= len(anodeTimes)):
+while(count <= len(anode)):
     anodeXaxis.append(count)
     count += 1
 
 count = 1
 
-while(count <= len(pmtTimes)):
+#while(count <= len(pmtTimes)):
+while(count <= len(pmt)):
     pmtXaxis.append(count)
     count += 1
+
+
+#ax2.scatter(anodeXaxis, anodeTimes, color="b")
+#ax2.scatter(pmtXaxis, pmtTimes, color="r", marker="P")
+
+anodeTimes = []
+
+pmtTimes = []
+
+for i in range(len(anode)):
+    anodeTimes.append(anode[i].timestamp)
+
+for i in range(len(pmt)):
+    pmtTimes.append(pmt[i].timestamp)
 
 
 ax2.scatter(anodeXaxis, anodeTimes, color="b")
@@ -162,7 +195,7 @@ ax3.scatter(difsXaxis, timeDifs)
 
 ax3.set_xlabel('acq number')
 ax3.set_ylabel('Time difs in miliseconds') 
-
+'''
 an =[]
 
 pmt = []
@@ -176,11 +209,13 @@ ax4.scatter(an, pmt)                          # see the correlation between anod
 ax4.set_xlabel('anode times')
 ax4.set_ylabel('pmt times')
 
-#fig = tsaplots.plot_acf(anodeTimes, lags = 25)
+'''
 
+#corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
 corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
 
-ax5.plot(corr)
+
+ax4.plot(corr)
 
 '''
 autocorr = np.correlate(anodeTimes, pmtTimes, mode = 'valid')
