@@ -23,8 +23,8 @@ class Event():
 #anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\\anode'  #folder path to .csv acquisitions for AD1 in scenario 1
 #pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\pmt'      #folder path to .csv acquisitions for AD2 in scenario 1
 
-anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1 run 31'   #folder path to .csv acquisitions for AD1 in scenario 1
-pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD2 run 31'      #folder path to .csv acquisitions for AD2 in scenario 1
+anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1 run 24'   #folder path to .csv acquisitions for AD1 in scenario 1
+pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD2 run 24'      #folder path to .csv acquisitions for AD2 in scenario 1
 
 
 #anodeTimes = []                                                    #list in which timestamps for anodeTimes is stored
@@ -66,27 +66,70 @@ for filename in os.listdir(pmtDir):
 #the following section is supposed to get rid of acquisition duplicates
 
 '''
-i = 0
+description for aligning nearest timestamps
 
-length = len(anodeTimes) - 1
+step 1: determine which oscilloscope took more acquisitions. This is the list we are going to pop acquisitions from
 
-while(i < length):
-    if(anodeTimes[i + 1] < (anodeTimes[i] + 2)):#we are going to have some statement that compares anodeTimes[i] and anodeTimes[i + 1] to see if anodeTimes[i + 1] is outside of a reasonable range for the current EFG output frequency
-        anodeTimes.pop(i + 1)
-        length -= 1
-    i += 1
+step 2: start at the beginning of the smaller list and compare across and 1 up
+        if the smaller list acquisition is closer to the larger list acquisition that is across, then do nothing
+        if the smaller list acquisition is closer to the next larger list acquisition, then pop the acquisition in the larger list
 
-i = 0
+iterate through the list. Using this algorithm, we may or may not end up with the same number of acquisitions.
+we may need to compare the current acquisition to more than just the next one
 
-length = len(pmtTimes) - 1
-
-
-while(i < length):
-    if(pmtTimes[i + 1] < pmtTimes[i] + 2):#we are going to have some statement that compares anodeTimes[i] and anodeTimes[i + 1] to see if anodeTimes[i + 1] is outside of a reasonable range for the current EFG output frequency
-       pmtTimes.pop(i + 1)
-       length -= 1
-    i += 1
 '''
+
+choice = input("Would you like to run the acquisition alignment algorithm? (Y/N): ")
+
+if(choice.upper() == 'Y'):
+    for i in range(max(len(anode), len(pmt))):
+        if(len(anode) > len(pmt)):
+            if(abs(anode[i+1].timestamp - pmt[i].timestamp) < abs(anode[i].timestamp - pmt[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                    print("removing acquisition number:", i, "with a timestamp of:", anode[i].timestamp, "\n")
+                    anode.pop(i)
+        elif(len(pmt) > len(anode)):
+            if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                print("removing acquisition number:", i, "with a timestamp of:", pmt[i].timestamp, "\n")
+                pmt.pop(i)
+'''
+length = len(anode) - 1
+
+i = 0
+
+while( i < length):
+	if(anode[i + 1].timestamp < anode[i].timestamp + 30):
+		anode.pop( i+1 )
+		length -= 1
+	i += 1
+
+length = len(pmt) - 1
+
+i = 0
+
+while( i < length):
+	if(pmt[i + 1].timestamp < pmt[i].timestamp + 30):
+		pmt.pop( i+1 )
+		length -= 1
+	i += 1
+'''
+
+
+'''
+if(len(anode) > len(pmt)):
+        for i in range(len(pmt) - 1):
+            if(abs(anode[i+1].timestamp - pmt[i].timestamp) < abs(anode[i].timestamp - pmt[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                anode.pop(i)
+    elif(len(pmt) > len(anode)):
+        for i in range(len(anode) - 1):
+            if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                pmt.pop(i)
+'''
+
+
+#keep track of the list with the smallest list to prevent index errors. In some cases you remove enough acquisitions such that the larger list became smaller than the smaller list
+
+#if the acquisitions are equal, then do nothing.
+
 
 #The following section can be uncommented to display the timestamp values in anodeTimes and pmtTimes
 #This process slows down the program
@@ -137,6 +180,11 @@ print(statistics.stdev(timeDifs))
 print("\n")
 print("the median is:")
 print(statistics.median(timeDifs))                                                     #print median
+
+print("the number of acquisitions for AD1 is:")                                         #print number of acquisitions
+print(len(anode))
+print("the number of acquisitions for AD2 is:")
+print(len(pmt))
 
 #figure something out for bipolar distributions
 
@@ -195,21 +243,7 @@ ax3.scatter(difsXaxis, timeDifs)
 
 ax3.set_xlabel('acq number')
 ax3.set_ylabel('Time difs in miliseconds') 
-'''
-an =[]
 
-pmt = []
-
-for a, p in zip(anodeTimes, pmtTimes):        #to create arrays of anodeTimes and pmtTimes of the same size
-    an.append(a)
-    pmt.append(p)
-
-ax4.scatter(an, pmt)                          # see the correlation between anodeTimes and pmtTimes
-
-ax4.set_xlabel('anode times')
-ax4.set_ylabel('pmt times')
-
-'''
 
 #corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
 corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
