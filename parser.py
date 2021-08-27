@@ -11,31 +11,30 @@ from statsmodels.graphics.tsaplots import plot_acf
 import csv
 
 class Event():
-    scope = ''            #initialized to null string
-    timestamp = 0          #initialized to zero
-    voltage = 0            #this is the voltage from the ramp. It is initialized to zero
+    scope = ''             #The name of the oscilloscope the acquisition came from. Initialized to null string
+    timestamp = 0          #The timestamp value in milliseconds. Initialized to zero
+    voltage = 0            #This is the voltage from the ramp in volts. It is initialized to zero
 
-    def __init__(self, scp, time):  #we will include voltage as soon as we figure out how to record from multiple sources in Waveforms 2015
+    def __init__(self, scp, time, volt):  #we will include voltage as soon as we figure out how to record from multiple sources in Waveforms 2015
         self.scope = scp
         self.timestamp = time
+        self.voltage = volt
 
 
 #anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\\anode'  #folder path to .csv acquisitions for AD1 in scenario 1
 #pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\pmt'      #folder path to .csv acquisitions for AD2 in scenario 1
 
-anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1 run 24'   #folder path to .csv acquisitions for AD1 in scenario 1
-pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD2 run 24'      #folder path to .csv acquisitions for AD2 in scenario 1
+#anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1 run 27'   #folder path to .csv acquisitions for AD1 in scenario 1
+#pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD2 run 27'      #folder path to .csv acquisitions for AD2 in scenario 1
 
+anodeDir = 'C:\\Users\\skyfab\Documents\\Waveforms\\Data Scenario 1 with voltages\\AD1 run 2'   #folder path to .csv acquisitions for AD1 in scenario 1 with voltage measurements
+pmtDir = 'C:\\Users\\skyfab\Documents\\Waveforms\\Data Scenario 1 with voltages\\AD2 run 2'      #folder path to .csv acquisitions for AD2 in scenario 1 with voltage measurements
 
-#anodeTimes = []                                                    #list in which timestamps for anodeTimes is stored
 anode = []
 
-#pmtTimes = []                                                      #list in which timestamps for pmtTimes is stored
 pmt = []
 
 difsXaxis = []                                                     #number of time differences recorded
-
-
 
 
 
@@ -46,41 +45,50 @@ for filename in os.listdir(anodeDir):
                                                                    #the character name[index] corresponds to 6. We use the function int() to cast the character to an integer value
   
     timeStampVal = int(name[index - 8]) * 600000 + int(name[index - 7]) * 60000 + int(name[index - 5]) * 10000 + int(name[index - 4]) * 1000 + int(name[index - 2]) * 100 + int(name[index - 1]) * 10 + int(name[index]) #converting the timestamp to milliseconds
+    
+    volt = 0
+    
+    with open(name) as f:                 #get first voltage measurement from csv file
+        rows = list(csv.reader(f))
+        volt += (float(rows[21][1]) * 1000)     #multiplying by 1000 to convert from V to mV
+    
 
-    #anodeTimes.append(timeStampVal)                                 #add timestamp value to anodeTimes
+    anode.append(Event("AD1", timeStampVal, volt))    #Create event and add it to the list anode
 
-    anode.append(Event("AD1", timeStampVal))
   
-
+#Same idea as previous loop but with pmt
 for filename in os.listdir(pmtDir):
-    name = os.path.join(pmtDir, filename)                          
-    index = len(name) - 5
+    name = os.path.join(pmtDir, filename)                        
+    index = len(name) - 5                         
   
-    timeStampVal = int(name[index - 8]) * 600000 + int(name[index - 7]) * 60000 + int(name[index - 5]) * 10000 + int(name[index - 4]) * 1000 + int(name[index - 2]) * 100 + int(name[index - 1]) * 10 + int(name[index]) #converting the timestamp to milliseconds
+    timeStampVal = int(name[index - 8]) * 600000 + int(name[index - 7]) * 60000 + int(name[index - 5]) * 10000 + int(name[index - 4]) * 1000 + int(name[index - 2]) * 100 + int(name[index - 1]) * 10 + int(name[index]) 
+
+    volt = 0
+    
+    with open(name) as f:                
+        rows = list(csv.reader(f))
+        volt += (float(rows[21][1]) * 1000)       
+        
+
+    pmt.append(Event("AD2", timeStampVal, volt))          
 
 
-    #pmtTimes.append(timeStampVal)                                   #add timestamp value to pmtTimes
-
-    pmt.append(Event("AD2", timeStampVal))
-
-#the following section is supposed to get rid of acquisition duplicates
-
+#the following section pairs acquisitions
 '''
-description for aligning nearest timestamps
+Description of Acquisition Alignment Algorithm
 
-step 1: determine which oscilloscope took more acquisitions. This is the list we are going to pop acquisitions from
+step 1: determine which oscilloscope took more acquisitions. This is the list we are going to pop (remove) acquisitions from
 
 step 2: start at the beginning of the smaller list and compare across and 1 up
         if the smaller list acquisition is closer to the larger list acquisition that is across, then do nothing
-        if the smaller list acquisition is closer to the next larger list acquisition, then pop the acquisition in the larger list
+        if the smaller list acquisition is closer to the next larger list acquisition, then pop the current acquisition in the larger list
 
-iterate through the list. Using this algorithm, we may or may not end up with the same number of acquisitions.
-we may need to compare the current acquisition to more than just the next one
-
+repeat throughout the list
 '''
 
-choice = input("Would you like to run the acquisition alignment algorithm? (Y/N): ")
+choice = input("Would you like to run the Acquisition Alignment Algorithm? (Y/N): ")
 
+#Aquisition Alignment Algorithm
 if(choice.upper() == 'Y'):
     for i in range(max(len(anode), len(pmt))):
         if(len(anode) > len(pmt)):
@@ -91,7 +99,26 @@ if(choice.upper() == 'Y'):
             if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
                 print("removing acquisition number:", i, "with a timestamp of:", pmt[i].timestamp, "\n")
                 pmt.pop(i)
+
+
+
 '''
+#first version of acquisition alignment algorithm
+
+if(len(anode) > len(pmt)):
+        for i in range(len(pmt) - 1):
+            if(abs(anode[i+1].timestamp - pmt[i].timestamp) < abs(anode[i].timestamp - pmt[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                anode.pop(i)
+    elif(len(pmt) > len(anode)):
+        for i in range(len(anode) - 1):
+            if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                pmt.pop(i)
+'''
+
+'''
+#First "duplicate" eliminating algorithm. 
+#doesn't work well.
+
 length = len(anode) - 1
 
 i = 0
@@ -113,22 +140,6 @@ while( i < length):
 	i += 1
 '''
 
-
-'''
-if(len(anode) > len(pmt)):
-        for i in range(len(pmt) - 1):
-            if(abs(anode[i+1].timestamp - pmt[i].timestamp) < abs(anode[i].timestamp - pmt[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
-                anode.pop(i)
-    elif(len(pmt) > len(anode)):
-        for i in range(len(anode) - 1):
-            if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
-                pmt.pop(i)
-'''
-
-
-#keep track of the list with the smallest list to prevent index errors. In some cases you remove enough acquisitions such that the larger list became smaller than the smaller list
-
-#if the acquisitions are equal, then do nothing.
 
 
 #The following section can be uncommented to display the timestamp values in anodeTimes and pmtTimes
@@ -153,20 +164,25 @@ for i in range(len(pmtTimes)):                                          #iterate
 
 
 timeDifs = [] #difference between timestamps is stored here
+voltDifs = [] #difference between voltages is stored here
+voltTimeDifs = [] #the time difference produced from the slope of the ramp (50 mV/ms)
 
 
 count = 1  #serves as an index for the time differences
 
-#for a, p in zip(anodeTimes, pmtTimes): 
 for a, p in zip(anode, pmt):
-    #timeDifs.append( abs(a - p) )
-    timeDifs.append(abs(a.timestamp - p.timestamp))
-    print(count, abs( a.timestamp - p.timestamp ))        #This can be uncommented to print the index then the time difference, however this slows down the program
-    difsXaxis.append(count)
-    count += 1
+    timeDifs.append(abs(a.timestamp - p.timestamp))           #add the difference of the corresponding acquistion timestamps to the timeDifs list
+    voltDifs.append(abs(a.voltage - p.voltage))               #add the difference of the corresponding acquisition voltages to the voltDifs list
+    voltTimeDifs.append(abs(a.voltage - p.voltage) / 50)      #dividing the voltage difference by the slope of the ramp to get the time difference
+    print("%1d %10d %20s %10f %20s %f %20s %10f %20s %10f" % (count, abs(a.timestamp - p.timestamp), "anode voltage (mV): ", a.voltage, "pmt voltage (mV): ", p.voltage, "voltage diff (mV): ", abs(a.voltage - p.voltage), "truth time difference: ", abs(a.voltage - p.voltage) / 50))   #formatting of output
+    difsXaxis.append(count)          #difsXaxis is the number of time differences in the timeDifs list. It will be used as the x-axis in the plot
+    count += 1                       
 
 print("\n")
 
+#we have to figure out how to calculate time differences when the ramp drops because 
+#the voltage difference becomes very large, but the time difference is calculated
+#as much larger than it actually is.
 
 
 
@@ -181,19 +197,32 @@ print("\n")
 print("the median is:")
 print(statistics.median(timeDifs))                                                     #print median
 
+print('\n\n')
+
+print("The average voltage difference between the two oscilloscopes is: ")               
+print(sum(voltDifs) / len(voltDifs))                                        #print average
+print("\n")
+print("the standard deviation is:")                                         #print standard deviation
+print(statistics.stdev(voltDifs))
+print("\n")
+print("the median is:")
+print(statistics.median(voltDifs))                                                     #print median
+
+print('\n\n')
+
 print("the number of acquisitions for AD1 is:")                                         #print number of acquisitions
 print(len(anode))
 print("the number of acquisitions for AD2 is:")
 print(len(pmt))
 
-#figure something out for bipolar distributions
+
 
 #The following lines generate a histogram in a popup window
 
 
-fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)   # create figure and axes
+fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)                      # create figure and axes
 
-ax1.hist(timeDifs, bins = 'auto')
+ax1.hist(timeDifs, bins = 'auto')                                #figure out how to make bin width 1 ms
 ax1.set_title('Time Differences')
 ax1.set_xlabel('Time Difference in Milliseconds')
 ax1.set_ylabel('Frequency')
@@ -222,9 +251,9 @@ while(count <= len(pmt)):
 #ax2.scatter(anodeXaxis, anodeTimes, color="b")
 #ax2.scatter(pmtXaxis, pmtTimes, color="r", marker="P")
 
-anodeTimes = []
+anodeTimes = []                         #holds anode timestamps
 
-pmtTimes = []
+pmtTimes = []                           #holds pmt timestamps
 
 for i in range(len(anode)):
     anodeTimes.append(anode[i].timestamp)
@@ -245,27 +274,11 @@ ax3.set_xlabel('acq number')
 ax3.set_ylabel('Time difs in miliseconds') 
 
 
-#corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
+
 corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
 
 
 ax4.plot(corr)
 
-'''
-autocorr = np.correlate(anodeTimes, pmtTimes, mode = 'valid')
-
-print('\n\n')
-
-for i in range(len(autocorr)):
-    print(autocorr[i])
-'''
 
 plt.show()
-
-
-
-
-#pmt folder usually has one more acquisition than the anode folder. This can cause l#arge discrepancies when 
-#multiple acquisitions runs are kept in the same folder as non-corresponding acquisitions are subtracted
-#resulting in huge differences. 
-
