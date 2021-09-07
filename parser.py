@@ -5,6 +5,7 @@ from statsmodels.graphics import tsaplots  #for autocorrelation function
 import numpy as np                       #for autocorrelation
 import scipy
 from scipy import signal
+import scipy.stats as stats
 from pandas import read_csv
 from statsmodels.graphics.tsaplots import plot_acf
 
@@ -24,11 +25,11 @@ class Event():
 #anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\\anode'  #folder path to .csv acquisitions for AD1 in scenario 1
 #pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 2\pmt'      #folder path to .csv acquisitions for AD2 in scenario 1
 
-#anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1 run 27'   #folder path to .csv acquisitions for AD1 in scenario 1
-#pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD2 run 27'      #folder path to .csv acquisitions for AD2 in scenario 1
+anodeDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD1 run 32'   #folder path to .csv acquisitions for AD1 in scenario 1
+pmtDir = 'C:\\Users\\skyfab\\Documents\\Waveforms\\Data Scenario 1\\AD2 run 32'      #folder path to .csv acquisitions for AD2 in scenario 1
 
-anodeDir = 'C:\\Users\\skyfab\Documents\\Waveforms\\Data Scenario 1 with voltages\\AD1 run 2'   #folder path to .csv acquisitions for AD1 in scenario 1 with voltage measurements
-pmtDir = 'C:\\Users\\skyfab\Documents\\Waveforms\\Data Scenario 1 with voltages\\AD2 run 2'      #folder path to .csv acquisitions for AD2 in scenario 1 with voltage measurements
+#anodeDir = 'C:\\Users\\skyfab\Documents\\Waveforms\\Data Scenario 1 with voltages\\AD1 run 5'   #folder path to .csv acquisitions for AD1 in scenario 1 with voltage measurements
+#pmtDir = 'C:\\Users\\skyfab\Documents\\Waveforms\\Data Scenario 1 with voltages\\AD2 run 5'      #folder path to .csv acquisitions for AD2 in scenario 1 with voltage measurements
 
 anode = []
 
@@ -88,18 +89,52 @@ repeat throughout the list
 
 choice = input("Would you like to run the Acquisition Alignment Algorithm? (Y/N): ")
 
-#Aquisition Alignment Algorithm
-if(choice.upper() == 'Y'):
-    for i in range(max(len(anode), len(pmt))):
-        if(len(anode) > len(pmt)):
-            if(abs(anode[i+1].timestamp - pmt[i].timestamp) < abs(anode[i].timestamp - pmt[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
-                    print("removing acquisition number:", i, "with a timestamp of:", anode[i].timestamp, "\n")
-                    anode.pop(i)
-        elif(len(pmt) > len(anode)):
-            if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
-                print("removing acquisition number:", i, "with a timestamp of:", pmt[i].timestamp, "\n")
-                pmt.pop(i)
 
+
+
+if(choice.upper() == 'Y'):
+    choice2 = input("would you like to use the deprecated or updated version? (D/U): ")
+
+    #Deprecated Aquisition Alignment Algorithm
+    if(choice2.upper() == "D"):
+        for i in range(max(len(anode), len(pmt))):
+            if(len(anode) > len(pmt)):
+                if(abs(anode[i+1].timestamp - pmt[i].timestamp) < abs(anode[i].timestamp - pmt[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                        print("removing acquisition number:", i, "with a timestamp of:", anode[i].timestamp, "\n")
+                        anode.pop(i)
+            elif(len(pmt) > len(anode)):
+                if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                    print("removing acquisition number:", i, "with a timestamp of:", pmt[i].timestamp, "\n")
+                    pmt.pop(i)
+
+
+    #Updated New Aquisition Alignment Algorithm
+    elif(choice2.upper() == 'U'):
+        i = 0
+
+        while(i < max(len(anode), len(pmt))):
+            if(len(anode) > len(pmt)):
+                isDecreasing = True
+                
+                while(isDecreasing):   
+                    if(abs(anode[i+1].timestamp - pmt[i].timestamp) < abs(anode[i].timestamp - pmt[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                        print("removing acquisition number:", i, "with a timestamp of:", anode[i].timestamp, "\n")
+                        anode.pop(i)
+                    else:
+                        isDecreasing = False
+
+            elif(len(pmt) > len(anode)):
+                isDecreasing = True
+
+                while(isDecreasing):
+                    if(abs(pmt[i+1].timestamp - anode[i].timestamp) < abs(pmt[i].timestamp - anode[i].timestamp) ): #if the next acquisition of the larger list is closer to the current acquisition of the smaller list, remove the current acquisition of the larger list
+                        print("removing acquisition number:", i, "with a timestamp of:", pmt[i].timestamp, "\n")
+                        pmt.pop(i)
+                    else:
+                        isDecreasing = False
+                        
+
+            i += 1
 
 
 '''
@@ -169,6 +204,8 @@ voltTimeDifs = [] #the time difference produced from the slope of the ramp (50 m
 
 
 count = 1  #serves as an index for the time differences
+'''
+#old voltage difference method
 
 for a, p in zip(anode, pmt):
     timeDifs.append(abs(a.timestamp - p.timestamp))           #add the difference of the corresponding acquistion timestamps to the timeDifs list
@@ -183,9 +220,56 @@ print("\n")
 #we have to figure out how to calculate time differences when the ramp drops because 
 #the voltage difference becomes very large, but the time difference is calculated
 #as much larger than it actually is.
+'''
 
 
+'''
+for a, p in zip(anode, pmt):
+    timeDifs.append(abs(a.timestamp - p.timestamp))           #add the difference of the corresponding acquistion timestamps to the timeDifs list
+    
+    #if you are subtracting a negative value and a positive value, shift the negative value up by 10 V
+    if( (a.voltage < 0 and p.voltage < 0) or (a.voltage > 0 and p.voltage > 0)):    
+        voltDifs.append(abs(a.voltage - p.voltage))                            #add the difference of the corresponding acquisition voltages to the voltDifs list 
+        voltTimeDifs.append(abs(a.voltage - p.voltage) / 50)      #dividing the voltage difference by the slope of the ramp to get the time difference
+    else:
+        if(a.voltage < 0):
+            voltDifs.append(abs((a.voltage + 10.15) - p.voltage) ) 
+            voltTimeDifs.append(abs( (a.voltage + 10.15) - p.voltage) / 50)  #shift up by 10 V
+        else:
+             voltDifs.append(abs( a.voltage  - (p.voltage + 10.15) ))
+             voltTimeDifs.append(abs( a.voltage - (p.voltage + 10.15) ) / 50) #shift up by 10 V      #you could rewrite as .append(voltDifs[count-1])
 
+    print("%1d %10d %20s %10f %20s %f %20s %10f %20s %10f" % (count, abs(a.timestamp - p.timestamp), "anode voltage (mV): ", a.voltage, "pmt voltage (mV): ", p.voltage, "voltage diff (mV): ", voltDifs[count-1], "truth time difference: ",voltTimeDifs[count-1] ) )  #formatting of output
+    difsXaxis.append(count)          #difsXaxis is the number of time differences in the timeDifs list. It will be used as the x-axis in the plot
+    count += 1                       
+
+print("\n")
+
+'''
+
+#'''
+for a, p in zip(anode, pmt):
+    timeDifs.append(abs(a.timestamp - p.timestamp))           #add the difference of the corresponding acquistion timestamps to the timeDifs list
+    
+    #if you are subtracting a negative value and a positive value, shift the negative value up by 10 V
+    if( (a.voltage < 0 and p.voltage < 0) or (a.voltage > 0 and p.voltage > 0)):    
+        voltDifs.append(abs(a.voltage - p.voltage))                            #add the difference of the corresponding acquisition voltages to the voltDifs list 
+        voltTimeDifs.append(abs(a.voltage - p.voltage) / 50)      #dividing the voltage difference by the slope of the ramp to get the time difference
+    else:
+        if(a.voltage < 0):
+            voltDifs.append(abs((a.voltage + 10.15) - p.voltage) ) 
+            voltTimeDifs.append(abs( (a.voltage + 10.15) - p.voltage) / 50)  #shift up by 10 V
+        else:
+             voltDifs.append(abs( a.voltage  - (p.voltage + 10.15) ))
+             voltTimeDifs.append(abs( a.voltage - (p.voltage + 10.15) ) / 50) #shift up by 10 V      #you could rewrite as .append(voltDifs[count-1])
+
+    print("%1d %10d %20s %10f %20s %f %20s %10f %20s %10f" % (count, abs(a.timestamp - p.timestamp), "anode voltage (mV): ", a.voltage, "pmt voltage (mV): ", p.voltage, "voltage diff (mV): ", voltDifs[count-1], "truth time difference: ",voltTimeDifs[count-1] ) )  #formatting of output
+    difsXaxis.append(count)          #difsXaxis is the number of time differences in the timeDifs list. It will be used as the x-axis in the plot
+    count += 1                       
+
+print("\n")
+
+#'''
 
 
 print("The average time difference between the two oscilloscopes is: ")
@@ -280,5 +364,24 @@ corr = signal.correlate(anodeTimes, pmtTimes, mode = 'full', method = 'auto')
 
 ax4.plot(corr)
 
+
+#goodness plot
+#expected data (voltTimeDifs)
+#observed data (timeDifs)
+
+fig2, (ax5, ax6) = plt.subplots(2) 
+
+#stats.chisquare(f_obs = timeDifs, f_exp = voltTimeDifs)                    #chisquare(observedData, expectedData) 
+
+ax5.scatter(difsXaxis, timeDifs, color = "b")
+ax5.scatter(difsXaxis, voltTimeDifs, color = "r", marker = "P")
+
+ax5.set_title('timeDifs and voltTimeDifs vs Acquisition Number')
+ax5.set_xlabel('Acquisition Number')
+ax5.set_ylabel('Time in milliseconds')
+
+ax6.scatter(voltTimeDifs, timeDifs)
+ax6.set_xlabel('voltage time difference')
+ax6.set_ylabel('timestamp time difference')
 
 plt.show()
